@@ -1,0 +1,1034 @@
+﻿<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Cover Fire: Elite Warfare 3D - Master Build ✨</title>
+  <style>
+    * {
+      margin: 0;
+      padding: 0;
+      box-sizing: border-box;
+      user-select: none;
+    }
+    body {
+      background-color: #05070a;
+      overflow: hidden;
+      font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+      color: #fff;
+    }
+    #canvas-container {
+      width: 100vw;
+      height: 100vh;
+      display: block;
+    }
+
+    /* Tactical Crosshair & Hit Marker */
+    #crosshair {
+      position: absolute;
+      top: 50%;
+      left: 50%;
+      width: 24px;
+      height: 24px;
+      transform: translate(-50%, -50%);
+      pointer-events: none;
+      z-index: 10;
+    }
+    #crosshair::before, #crosshair::after {
+      content: '';
+      position: absolute;
+      background: #00ffcc;
+      box-shadow: 0 0 8px #00ffcc;
+    }
+    #crosshair::before { top: 11px; left: 0; width: 24px; height: 2px; }
+    #crosshair::after { top: 0; left: 11px; width: 2px; height: 24px; }
+
+    #hit-marker {
+      position: absolute;
+      top: 50%;
+      left: 50%;
+      width: 18px;
+      height: 18px;
+      transform: translate(-50%, -50%) rotate(45deg);
+      border: 2px solid #ff0055;
+      pointer-events: none;
+      z-index: 11;
+      opacity: 0;
+      transition: opacity 0.08s ease;
+    }
+
+    /* Sniper Scope Overlay */
+    #sniper-scope {
+      position: absolute;
+      top: 0;
+      left: 0;
+      width: 100vw;
+      height: 100vh;
+      pointer-events: none;
+      z-index: 12;
+      background: radial-gradient(circle at center, transparent 30%, black 75%);
+      display: none;
+      border: 50px solid black;
+    }
+    #sniper-scope::before {
+      content: '';
+      position: absolute;
+      top: 50%; left: 0; width: 100%; height: 1px; background: rgba(255, 0, 85, 0.8);
+    }
+    #sniper-scope::after {
+      content: '';
+      position: absolute;
+      top: 0; left: 50%; width: 1px; height: 100%; background: rgba(255, 0, 85, 0.8);
+    }
+
+    /* HUD Overlay */
+    #hud {
+      position: absolute;
+      top: 0;
+      left: 0;
+      width: 100%;
+      height: 100%;
+      pointer-events: none;
+      display: flex;
+      flex-direction: column;
+      justify-content: space-between;
+      padding: 24px;
+      z-index: 5;
+    }
+
+    .hud-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: flex-start;
+    }
+
+    .stat-box {
+      background: rgba(10, 15, 25, 0.85);
+      border: 1px solid rgba(0, 255, 204, 0.3);
+      backdrop-filter: blur(6px);
+      padding: 12px 20px;
+      border-radius: 6px;
+      box-shadow: 0 0 15px rgba(0, 0, 0, 0.5);
+    }
+
+    .stat-label {
+      font-size: 11px;
+      letter-spacing: 2px;
+      color: #88a0b0;
+      text-transform: uppercase;
+      margin-bottom: 4px;
+    }
+
+    .stat-value {
+      font-size: 24px;
+      font-weight: 800;
+      color: #00ffcc;
+      text-shadow: 0 0 10px rgba(0, 255, 204, 0.5);
+    }
+
+    /* Boss & Wave Indicators */
+    #wave-display {
+      position: absolute;
+      top: 20px;
+      left: 50%;
+      transform: translateX(-50%);
+      font-size: 18px;
+      font-weight: bold;
+      letter-spacing: 3px;
+      color: #00ffcc;
+      text-shadow: 0 0 10px #00ffcc;
+      background: rgba(10, 15, 25, 0.8);
+      padding: 6px 18px;
+      border-radius: 20px;
+      border: 1px solid rgba(0, 255, 204, 0.4);
+    }
+
+    #boss-bar-container {
+      position: absolute;
+      top: 60px;
+      left: 50%;
+      transform: translateX(-50%);
+      width: 360px;
+      text-align: center;
+      display: none;
+    }
+    .boss-name {
+      font-size: 13px;
+      font-weight: 800;
+      letter-spacing: 3px;
+      color: #ff0055;
+      text-shadow: 0 0 10px #ff0055;
+      margin-bottom: 6px;
+    }
+    .boss-bar-bg {
+      width: 100%;
+      height: 12px;
+      background: rgba(0,0,0,0.8);
+      border: 1px solid #ff0055;
+      border-radius: 6px;
+      overflow: hidden;
+    }
+    #boss-bar-fill {
+      width: 100%;
+      height: 100%;
+      background: linear-gradient(90deg, #ff0055, #ff5500);
+      box-shadow: 0 0 10px #ff0055;
+      transition: width 0.1s ease;
+    }
+
+    /* Health Bar */
+    .health-bar-bg {
+      width: 180px;
+      height: 10px;
+      background: rgba(255, 255, 255, 0.1);
+      border-radius: 6px;
+      overflow: hidden;
+      margin-top: 6px;
+      border: 1px solid rgba(255, 0, 85, 0.4);
+    }
+    #health-bar-fill {
+      width: 100%;
+      height: 100%;
+      background: linear-gradient(90deg, #ff0055, #ff5500);
+      box-shadow: 0 0 10px #ff0055;
+      transition: width 0.2s ease;
+    }
+
+    /* Cover Status Indicator */
+    #cover-status {
+      position: absolute;
+      bottom: 30px;
+      left: 50%;
+      transform: translateX(-50%);
+      padding: 10px 24px;
+      font-size: 15px;
+      font-weight: bold;
+      letter-spacing: 2px;
+      border-radius: 30px;
+      background: rgba(0, 255, 204, 0.2);
+      border: 1px solid #00ffcc;
+      color: #00ffcc;
+      text-shadow: 0 0 10px #00ffcc;
+      box-shadow: 0 0 20px rgba(0, 255, 204, 0.3);
+      transition: all 0.2s ease;
+    }
+    #cover-status.exposed {
+      background: rgba(255, 0, 85, 0.2);
+      border-color: #ff0055;
+      color: #ff0055;
+      text-shadow: 0 0 10px #ff0055;
+      box-shadow: 0 0 20px rgba(255, 0, 85, 0.3);
+    }
+
+    /* Controls Panel */
+    #controls-hint {
+      position: absolute;
+      bottom: 20px;
+      right: 20px;
+      background: rgba(10, 15, 25, 0.85);
+      border: 1px solid rgba(0, 255, 204, 0.3);
+      padding: 14px 18px;
+      border-radius: 8px;
+      font-size: 13px;
+      line-height: 1.6;
+      color: #aaa;
+    }
+    .key-badge {
+      background: rgba(0, 255, 204, 0.2);
+      color: #00ffcc;
+      padding: 2px 6px;
+      border-radius: 4px;
+      font-weight: bold;
+    }
+
+    /* Screen Overlays */
+    .screen-overlay {
+      position: absolute;
+      top: 0;
+      left: 0;
+      width: 100%;
+      height: 100%;
+      background: rgba(5, 7, 10, 0.92);
+      display: flex;
+      flex-direction: column;
+      justify-content: center;
+      align-items: center;
+      gap: 20px;
+      z-index: 20;
+    }
+    .screen-overlay h1 {
+      font-size: 46px;
+      letter-spacing: 4px;
+      color: #00ffcc;
+      text-shadow: 0 0 20px #00ffcc;
+    }
+    .btn {
+      padding: 14px 38px;
+      font-size: 18px;
+      font-weight: 800;
+      letter-spacing: 2px;
+      color: #05070a;
+      background: #00ffcc;
+      border: none;
+      border-radius: 30px;
+      cursor: pointer;
+      box-shadow: 0 0 20px #00ffcc;
+      transition: all 0.2s ease;
+      pointer-events: auto;
+    }
+    .btn:hover {
+      transform: scale(1.05);
+      box-shadow: 0 0 30px #00ffcc;
+    }
+    .hidden { display: none !important; }
+  </style>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+</head>
+<body>
+
+<div id="canvas-container"></div>
+<div id="crosshair"></div>
+<div id="hit-marker"></div>
+<div id="sniper-scope"></div>
+
+<div id="hud">
+  <div class="hud-header">
+    <div class="stat-box">
+      <div class="stat-label">OPERATIVE HEALTH</div>
+      <div class="stat-value" id="hp-text">100</div>
+      <div class="health-bar-bg">
+        <div id="health-bar-fill"></div>
+      </div>
+    </div>
+
+    <div id="wave-display">WAVE 1 / 3</div>
+
+    <div id="boss-bar-container">
+      <div class="boss-name">⚠️ BOSS: HEAVY COMBAT HELICOPTER</div>
+      <div class="boss-bar-bg">
+        <div id="boss-bar-fill"></div>
+      </div>
+    </div>
+
+    <div class="stat-box" style="text-align: center;">
+      <div class="stat-label">KILLS</div>
+      <div class="stat-value" id="score-text">0</div>
+    </div>
+
+    <div class="stat-box" style="text-align: right;">
+      <div class="stat-label">WEAPON / AMMO</div>
+      <div class="stat-value" id="weapon-text">RIFLE</div>
+      <div style="color: #00ffcc; font-size: 15px; margin-top: 4px;" id="ammo-text">30 / 30</div>
+      <div style="color: #ff9900; font-size: 13px; margin-top: 4px;" id="grenade-text">💣 GRENADES: 3</div>
+    </div>
+  </div>
+
+  <div id="cover-status">🛡️ IN COVER (SAFE)</div>
+
+  <div id="controls-hint">
+    <span class="key-badge">SPACEBAR</span> Aim / Pop Out<br>
+    <span class="key-badge">L-CLICK</span> Fire Active Gun<br>
+    <span class="key-badge">1, 2, 3</span> Rifle / Sniper / Shotgun<br>
+    <span class="key-badge">G</span> Frag Grenade Arc<br>
+    <span class="key-badge">R</span> Reload Magazine
+  </div>
+</div>
+
+<!-- Start Screen -->
+<div id="start-screen" class="screen-overlay">
+  <h1>COVER FIRE: ELITE WARFARE</h1>
+  <p style="color: #88a0b0; max-width: 460px; text-align: center; line-height: 1.6;">
+    Take cover to survive. Pop out to shoot down hostile mercenaries across 3 combat waves culminating in an aerial boss battle!
+  </p>
+  <button class="btn" id="start-btn">START COMBAT</button>
+</div>
+
+<!-- Game Over Screen -->
+<div id="game-over-screen" class="screen-overlay hidden">
+  <h1 style="color: #ff0055; text-shadow: 0 0 20px #ff0055;" id="game-over-title">MISSION FAILED</h1>
+  <p style="color: #ccc; font-size: 20px;" id="final-score-text">Eliminations: 0</p>
+  <button class="btn" id="restart-btn">REDEPLOY</button>
+</div>
+
+<script>
+// --- AUDIO SYNTHESIZER (Web Audio API) ---
+class SoundSynth {
+  constructor() {
+    this.ctx = null;
+  }
+  init() {
+    if (!this.ctx) {
+      this.ctx = new (window.AudioContext || window.webkitAudioContext)();
+    }
+  }
+
+  playShot(type) {
+    if (!this.ctx) return;
+    const now = this.ctx.currentTime;
+    const osc = this.ctx.createOscillator();
+    const gain = this.ctx.createGain();
+
+    if (type === 'RIFLE') {
+      osc.type = 'sawtooth';
+      osc.frequency.setValueAtTime(300, now);
+      osc.frequency.exponentialRampToValueAtTime(40, now + 0.12);
+      gain.gain.setValueAtTime(0.3, now);
+      gain.gain.exponentialRampToValueAtTime(0.01, now + 0.12);
+    } else if (type === 'SNIPER') {
+      osc.type = 'square';
+      osc.frequency.setValueAtTime(600, now);
+      osc.frequency.exponentialRampToValueAtTime(20, now + 0.35);
+      gain.gain.setValueAtTime(0.6, now);
+      gain.gain.exponentialRampToValueAtTime(0.01, now + 0.35);
+    } else if (type === 'SHOTGUN') {
+      osc.type = 'triangle';
+      osc.frequency.setValueAtTime(180, now);
+      osc.frequency.exponentialRampToValueAtTime(30, now + 0.25);
+      gain.gain.setValueAtTime(0.5, now);
+      gain.gain.exponentialRampToValueAtTime(0.01, now + 0.25);
+    }
+
+    osc.connect(gain);
+    gain.connect(this.ctx.destination);
+    osc.start(now);
+    osc.stop(now + 0.35);
+  }
+
+  playExplosion() {
+    if (!this.ctx) return;
+    const now = this.ctx.currentTime;
+    const osc = this.ctx.createOscillator();
+    const gain = this.ctx.createGain();
+
+    osc.type = 'sawtooth';
+    osc.frequency.setValueAtTime(100, now);
+    osc.frequency.linearRampToValueAtTime(10, now + 0.6);
+
+    gain.gain.setValueAtTime(0.7, now);
+    gain.gain.exponentialRampToValueAtTime(0.01, now + 0.6);
+
+    osc.connect(gain);
+    gain.connect(this.ctx.destination);
+    osc.start(now);
+    osc.stop(now + 0.6);
+  }
+
+  playHit() {
+    if (!this.ctx) return;
+    const now = this.ctx.currentTime;
+    const osc = this.ctx.createOscillator();
+    const gain = this.ctx.createGain();
+    osc.type = 'sine';
+    osc.frequency.setValueAtTime(800, now);
+    osc.frequency.exponentialRampToValueAtTime(400, now + 0.08);
+    gain.gain.setValueAtTime(0.2, now);
+    gain.gain.exponentialRampToValueAtTime(0.01, now + 0.08);
+    osc.connect(gain);
+    gain.connect(this.ctx.destination);
+    osc.start(now);
+    osc.stop(now + 0.08);
+  }
+}
+
+const sounds = new SoundSynth();
+
+// --- WEAPONS CONFIG ---
+const WEAPONS = {
+  RIFLE: { name: 'ASSAULT RIFLE', maxAmmo: 30, fireRate: 140, damage: 1, pellets: 1, spread: 0 },
+  SNIPER: { name: 'HEAVY SNIPER', maxAmmo: 5, fireRate: 750, damage: 3, pellets: 1, spread: 0, zoomFov: 20 },
+  SHOTGUN: { name: 'TACTICAL SHOTGUN', maxAmmo: 8, fireRate: 500, damage: 1, pellets: 6, spread: 0.08 }
+};
+
+// --- GAME ENGINE VARIABLES ---
+let scene, camera, renderer;
+let isCovered = true;
+let health = 100;
+let score = 0;
+let currentWave = 1;
+let currentWeaponKey = 'RIFLE';
+let ammo = WEAPONS.RIFLE.maxAmmo;
+let grenades = 3;
+let isReloading = false;
+let gameRunning = false;
+let lastShotTime = 0;
+
+let enemies = [];
+let bulletTracers = [];
+let activeGrenades = [];
+let activeParticles = [];
+let boss = null;
+let screenShake = 0;
+
+const mouse = new THREE.Vector2();
+const raycaster = new THREE.Raycaster();
+
+const COVER_CAM_POS = new THREE.Vector3(0, 1.1, 3.5);
+const EXPOSED_CAM_POS = new THREE.Vector3(0.6, 1.8, 3.2);
+const targetCamPos = COVER_CAM_POS.clone();
+
+// DOM References
+const hpText = document.getElementById('hp-text');
+const healthBarFill = document.getElementById('health-bar-fill');
+const scoreText = document.getElementById('score-text');
+const waveDisplay = document.getElementById('wave-display');
+const weaponText = document.getElementById('weapon-text');
+const ammoText = document.getElementById('ammo-text');
+const grenadeText = document.getElementById('grenade-text');
+const coverStatus = document.getElementById('cover-status');
+const sniperScope = document.getElementById('sniper-scope');
+const hitMarker = document.getElementById('hit-marker');
+const bossBarContainer = document.getElementById('boss-bar-container');
+const bossBarFill = document.getElementById('boss-bar-fill');
+
+// --- INIT THREE.JS ---
+function initScene() {
+  const container = document.getElementById('canvas-container');
+
+  scene = new THREE.Scene();
+  scene.background = new THREE.Color(0x070a10);
+  scene.fog = new THREE.FogExp2(0x070a10, 0.02);
+
+  camera = new THREE.PerspectiveCamera(60, window.innerWidth / window.innerHeight, 0.1, 1000);
+  camera.position.copy(COVER_CAM_POS);
+
+  renderer = new THREE.WebGLRenderer({ antialias: true });
+  renderer.setSize(window.innerWidth, window.innerHeight);
+  renderer.shadowMap.enabled = true;
+  renderer.shadowMap.type = THREE.PCFSoftShadowMap;
+  container.appendChild(renderer.domElement);
+
+  scene.add(new THREE.AmbientLight(0xffffff, 0.4));
+  
+  const sun = new THREE.DirectionalLight(0x00e1ff, 1.2);
+  sun.position.set(20, 40, 20);
+  sun.castShadow = true;
+  scene.add(sun);
+
+  buildEnvironment();
+
+  window.addEventListener('resize', onWindowResize);
+  window.addEventListener('mousemove', onMouseMove);
+  window.addEventListener('mousedown', onMouseDown);
+  window.addEventListener('keydown', onKeyDown);
+  window.addEventListener('keyup', onKeyUp);
+}
+
+function buildEnvironment() {
+  const floor = new THREE.Mesh(
+    new THREE.PlaneGeometry(120, 120),
+    new THREE.MeshStandardMaterial({ color: 0x101520, roughness: 0.8 })
+  );
+  floor.rotation.x = -Math.PI / 2;
+  floor.receiveShadow = true;
+  scene.add(floor);
+
+  const barricade = new THREE.Mesh(
+    new THREE.BoxGeometry(4.5, 1.2, 0.8),
+    new THREE.MeshStandardMaterial({ color: 0x243044, roughness: 0.5 })
+  );
+  barricade.position.set(0, 0.6, 1.8);
+  barricade.castShadow = true;
+  scene.add(barricade);
+
+  const covers = [
+    { x: -6, z: -12 }, { x: 0, z: -15 }, { x: 7, z: -10 },
+    { x: -10, z: -20 }, { x: 5, z: -22 }, { x: 11, z: -18 }
+  ];
+
+  covers.forEach(pos => {
+    const crate = new THREE.Mesh(
+      new THREE.BoxGeometry(2.5, 2, 2.5),
+      new THREE.MeshStandardMaterial({ color: 0x1a2333, roughness: 0.6 })
+    );
+    crate.position.set(pos.x, 1, pos.z);
+    crate.castShadow = true;
+    scene.add(crate);
+  });
+}
+
+// --- BOSS HELICOPTER ---
+class BossHelicopter {
+  constructor() {
+    this.group = new THREE.Group();
+    
+    const bodyMesh = new THREE.Mesh(
+      new THREE.BoxGeometry(4, 2, 8),
+      new THREE.MeshStandardMaterial({ color: 0x222222, metalness: 0.8, roughness: 0.2 })
+    );
+    this.group.add(bodyMesh);
+
+    const cockpit = new THREE.Mesh(
+      new THREE.SphereGeometry(1.2, 16, 16),
+      new THREE.MeshStandardMaterial({ color: 0xff0055, emissive: 0xff0055, emissiveIntensity: 0.6 })
+    );
+    cockpit.position.set(0, 0.2, 3.5);
+    this.group.add(cockpit);
+
+    const rotorGeo = new THREE.BoxGeometry(14, 0.1, 0.6);
+    this.rotor = new THREE.Mesh(rotorGeo, new THREE.MeshStandardMaterial({ color: 0x111111 }));
+    this.rotor.position.set(0, 1.4, 0);
+    this.group.add(this.rotor);
+
+    this.group.position.set(0, 10, -30);
+    scene.add(this.group);
+
+    this.health = 50;
+    this.maxHealth = 50;
+    this.alive = true;
+    this.attackTimer = 0;
+  }
+
+  update(delta) {
+    if (!this.alive) return;
+    this.rotor.rotation.y += delta * 25;
+    this.group.position.x = Math.sin(performance.now() * 0.001) * 8;
+    this.group.position.y = 10 + Math.cos(performance.now() * 0.0015) * 1.5;
+
+    this.attackTimer += delta;
+    if (this.attackTimer > 2.0) {
+      this.attackTimer = 0;
+      if (!isCovered && gameRunning) {
+        this.fireRocket();
+      }
+    }
+  }
+
+  fireRocket() {
+    createTracer(this.group.position.clone(), camera.position.clone(), 0xff9900);
+    spawnExplosion(camera.position.clone().add(new THREE.Vector3(0,0,-1)), 0xff5500, 15);
+    triggerShake(0.4);
+    health = Math.max(0, health - 25);
+    updateHUD();
+    if (health <= 0) endGame(false);
+  }
+
+  takeDamage(amount) {
+    this.health -= amount;
+    showHitMarker();
+    bossBarFill.style.width = `${Math.max(0, (this.health / this.maxHealth) * 100)}%`;
+
+    if (this.health <= 0) {
+      this.alive = false;
+      spawnExplosion(this.group.position.clone(), 0xff0055, 60);
+      sounds.playExplosion();
+      triggerShake(0.6);
+      scene.remove(this.group);
+      bossBarContainer.style.display = 'none';
+      score += 10;
+      updateHUD();
+      setTimeout(() => endGame(true), 1500);
+    }
+  }
+}
+
+// --- ENEMY CLASS ---
+class Enemy {
+  constructor(x, z) {
+    this.group = new THREE.Group();
+    
+    const body = new THREE.Mesh(
+      new THREE.CylinderGeometry(0.5, 0.5, 1.8),
+      new THREE.MeshStandardMaterial({ color: 0xff0055 })
+    );
+    body.position.y = 0.9;
+    this.body = body;
+    this.group.add(body);
+
+    const head = new THREE.Mesh(
+      new THREE.SphereGeometry(0.35),
+      new THREE.MeshStandardMaterial({ color: 0xff4477 })
+    );
+    head.position.y = 2.0;
+    this.group.add(head);
+
+    this.group.position.set(x, 0, z);
+    scene.add(this.group);
+
+    this.health = 2;
+    this.state = 'cover';
+    this.timer = Math.random() * 2 + 1;
+    this.alive = true;
+  }
+
+  update(delta) {
+    if (!this.alive) return;
+    this.timer -= delta;
+    if (this.timer <= 0) {
+      if (this.state === 'cover') {
+        this.state = 'exposed';
+        this.group.position.y = 0.8;
+        this.timer = 1.2 + Math.random() * 1.5;
+      } else {
+        if (!isCovered && gameRunning) {
+          createTracer(this.group.position.clone().add(new THREE.Vector3(0, 1.5, 0)), camera.position.clone(), 0xff0055);
+          sounds.playShot('RIFLE');
+          health = Math.max(0, health - 10);
+          triggerShake(0.15);
+          updateHUD();
+          if (health <= 0) endGame(false);
+        }
+        this.state = 'cover';
+        this.group.position.y = -0.6;
+        this.timer = 2 + Math.random() * 2.5;
+      }
+    }
+  }
+
+  takeHit(damage) {
+    this.health -= damage;
+    showHitMarker();
+    sounds.playHit();
+    if (this.health <= 0) {
+      this.alive = false;
+      spawnExplosion(this.group.position.clone(), 0xff0055, 20);
+      scene.remove(this.group);
+      score += 1;
+      checkWaveProgress();
+      updateHUD();
+    }
+  }
+}
+
+function spawnEnemy() {
+  const covers = [
+    { x: -6, z: -12 }, { x: 0, z: -15 }, { x: 7, z: -10 },
+    { x: -10, z: -20 }, { x: 5, z: -22 }, { x: 11, z: -18 }
+  ];
+  const spot = covers[Math.floor(Math.random() * covers.length)];
+  enemies.push(new Enemy(spot.x, spot.z));
+}
+
+function checkWaveProgress() {
+  if (score === 3 && currentWave === 1) {
+    currentWave = 2;
+    waveDisplay.textContent = 'WAVE 2 / 3';
+    for (let i = 0; i < 4; i++) spawnEnemy();
+  } else if (score === 7 && currentWave === 2) {
+    currentWave = 3;
+    waveDisplay.textContent = 'FINAL WAVE: BOSS ENCOUNTER';
+    bossBarContainer.style.display = 'block';
+    bossBarFill.style.width = '100%';
+    boss = new BossHelicopter();
+  } else if (currentWave < 3) {
+    setTimeout(() => spawnEnemy(), 1500);
+  }
+}
+
+// --- GRENADE ---
+class FragGrenade {
+  constructor(targetPos) {
+    this.mesh = new THREE.Mesh(
+      new THREE.SphereGeometry(0.25, 8, 8),
+      new THREE.MeshStandardMaterial({ color: 0x00ffcc, emissive: 0x00ffcc, emissiveIntensity: 0.8 })
+    );
+    this.mesh.position.copy(camera.position);
+    scene.add(this.mesh);
+
+    this.target = targetPos;
+    this.time = 0;
+    this.duration = 1.1;
+    this.start = camera.position.clone();
+    this.active = true;
+  }
+
+  update(delta) {
+    if (!this.active) return;
+    this.time += delta;
+    const t = this.time / this.duration;
+
+    if (t >= 1) {
+      this.explode();
+    } else {
+      this.mesh.position.lerpVectors(this.start, this.target, t);
+      this.mesh.position.y += Math.sin(t * Math.PI) * 4;
+    }
+  }
+
+  explode() {
+    this.active = false;
+    scene.remove(this.mesh);
+    spawnExplosion(this.target, 0x00ffcc, 45);
+    sounds.playExplosion();
+    triggerShake(0.5);
+
+    enemies.forEach(e => {
+      if (e.alive && e.group.position.distanceTo(this.target) < 6) {
+        e.takeHit(5);
+      }
+    });
+
+    if (boss && boss.alive && boss.group.position.distanceTo(this.target) < 10) {
+      boss.takeDamage(10);
+    }
+  }
+}
+
+// --- UTILITIES ---
+function triggerShake(intensity) {
+  screenShake = intensity;
+}
+
+function showHitMarker() {
+  hitMarker.style.opacity = '1';
+  setTimeout(() => hitMarker.style.opacity = '0', 100);
+}
+
+function spawnExplosion(pos, colorHex, count = 20) {
+  for (let i = 0; i < count; i++) {
+    const p = new THREE.Mesh(
+      new THREE.SphereGeometry(0.12),
+      new THREE.MeshBasicMaterial({ color: colorHex })
+    );
+    p.position.copy(pos);
+    const vel = new THREE.Vector3(
+      (Math.random() - 0.5) * 12,
+      Math.random() * 8 + 2,
+      (Math.random() - 0.5) * 12
+    );
+    scene.add(p);
+    activeParticles.push({ mesh: p, vel: vel, life: 0.6 });
+  }
+}
+
+function createTracer(start, end, colorHex = 0x00ffcc) {
+  const mat = new THREE.LineBasicMaterial({ color: colorHex, linewidth: 2 });
+  const geo = new THREE.BufferGeometry().setFromPoints([start, end]);
+  const line = new THREE.Line(geo, mat);
+  scene.add(line);
+  bulletTracers.push({ mesh: line, life: 0.08 });
+}
+
+// --- INPUTS ---
+function onKeyDown(e) {
+  if (!gameRunning) return;
+
+  if (e.code === 'Space' && isCovered) {
+    isCovered = false;
+    targetCamPos.copy(EXPOSED_CAM_POS);
+    coverStatus.textContent = '⚠️ EXPOSED (AIMING)';
+    coverStatus.classList.add('exposed');
+    if (currentWeaponKey === 'SNIPER') {
+      sniperScope.style.display = 'block';
+      camera.fov = WEAPONS.SNIPER.zoomFov;
+      camera.updateProjectionMatrix();
+    }
+  }
+
+  if (e.key === '1') switchWeapon('RIFLE');
+  if (e.key === '2') switchWeapon('SNIPER');
+  if (e.key === '3') switchWeapon('SHOTGUN');
+
+  if (e.code === 'KeyG' && grenades > 0 && !isCovered) {
+    grenades--;
+    updateHUD();
+    raycaster.setFromCamera(mouse, camera);
+    const target = new THREE.Vector3();
+    raycaster.ray.at(20, target);
+    activeGrenades.push(new FragGrenade(target));
+  }
+
+  if (e.code === 'KeyR' && !isReloading) reloadWeapon();
+}
+
+function onKeyUp(e) {
+  if (!gameRunning) return;
+  if (e.code === 'Space' && !isCovered) {
+    isCovered = true;
+    targetCamPos.copy(COVER_CAM_POS);
+    coverStatus.textContent = '🛡️ IN COVER (SAFE)';
+    coverStatus.classList.remove('exposed');
+    sniperScope.style.display = 'none';
+    camera.fov = 60;
+    camera.updateProjectionMatrix();
+  }
+}
+
+function switchWeapon(key) {
+  if (currentWeaponKey === key) return;
+  currentWeaponKey = key;
+  ammo = WEAPONS[key].maxAmmo;
+  updateHUD();
+}
+
+function onMouseDown() {
+  if (!gameRunning || isCovered || isReloading) return;
+
+  const w = WEAPONS[currentWeaponKey];
+  const now = performance.now();
+  if (now - lastShotTime < w.fireRate) return;
+  lastShotTime = now;
+
+  if (ammo <= 0) {
+    reloadWeapon();
+    return;
+  }
+
+  ammo--;
+  sounds.playShot(currentWeaponKey);
+  if (currentWeaponKey === 'SNIPER') triggerShake(0.2);
+  updateHUD();
+
+  for (let i = 0; i < w.pellets; i++) {
+    const spreadMouse = mouse.clone().add(new THREE.Vector2(
+      (Math.random() - 0.5) * w.spread,
+      (Math.random() - 0.5) * w.spread
+    ));
+
+    raycaster.setFromCamera(spreadMouse, camera);
+    const targets = enemies.filter(e => e.alive).map(e => e.body);
+    if (boss && boss.alive) targets.push(boss.group.children[0]);
+
+    const intersects = raycaster.intersectObjects(targets);
+    const hitPoint = new THREE.Vector3();
+
+    if (intersects.length > 0) {
+      hitPoint.copy(intersects[0].point);
+      const hitObj = intersects[0].object;
+
+      const hitEnemy = enemies.find(e => e.body === hitObj);
+      if (hitEnemy) hitEnemy.takeHit(w.damage);
+
+      if (boss && hitObj === boss.group.children[0]) boss.takeDamage(w.damage);
+    } else {
+      raycaster.ray.at(30, hitPoint);
+    }
+
+    const muzzle = camera.position.clone().add(new THREE.Vector3(0.2, -0.2, -0.5));
+    createTracer(muzzle, hitPoint, 0x00ffcc);
+  }
+}
+
+function reloadWeapon() {
+  isReloading = true;
+  ammoText.textContent = 'RELOADING...';
+  setTimeout(() => {
+    ammo = WEAPONS[currentWeaponKey].maxAmmo;
+    isReloading = false;
+    updateHUD();
+  }, 1200);
+}
+
+function updateHUD() {
+  hpText.textContent = health;
+  healthBarFill.style.width = `${Math.max(0, health)}%`;
+  scoreText.textContent = score;
+  weaponText.textContent = WEAPONS[currentWeaponKey].name;
+  grenadeText.textContent = `💣 GRENADES: ${grenades}`;
+  if (!isReloading) {
+    ammoText.textContent = `${ammo} / ${WEAPONS[currentWeaponKey].maxAmmo}`;
+  }
+}
+
+function onMouseMove(e) {
+  mouse.x = (e.clientX / window.innerWidth) * 2 - 1;
+  mouse.y = -(e.clientY / window.innerHeight) * 2 + 1;
+}
+
+// --- ENGINE LOOP ---
+const clock = new THREE.Clock();
+
+function animate() {
+  requestAnimationFrame(animate);
+  const delta = clock.getDelta();
+
+  if (gameRunning) {
+    camera.position.lerp(targetCamPos, delta * 10);
+    
+    // Screen Shake Application
+    if (screenShake > 0) {
+      camera.position.x += (Math.random() - 0.5) * screenShake;
+      camera.position.y += (Math.random() - 0.5) * screenShake;
+      screenShake = Math.max(0, screenShake - delta * 1.5);
+    }
+
+    camera.rotation.y = -mouse.x * (currentWeaponKey === 'SNIPER' && !isCovered ? 0.04 : 0.15);
+    camera.rotation.x = mouse.y * (currentWeaponKey === 'SNIPER' && !isCovered ? 0.04 : 0.1);
+
+    enemies.forEach(e => e.update(delta));
+    if (boss) boss.update(delta);
+
+    activeGrenades.forEach((g, idx) => {
+      g.update(delta);
+      if (!g.active) activeGrenades.splice(idx, 1);
+    });
+
+    activeParticles.forEach((p, idx) => {
+      p.mesh.position.addScaledVector(p.vel, delta);
+      p.life -= delta;
+      if (p.life <= 0) {
+        scene.remove(p.mesh);
+        activeParticles.splice(idx, 1);
+      }
+    });
+
+    bulletTracers.forEach((t, idx) => {
+      t.life -= delta;
+      if (t.life <= 0) {
+        scene.remove(t.mesh);
+        bulletTracers.splice(idx, 1);
+      }
+    });
+  }
+
+  renderer.render(scene, camera);
+}
+
+function startGame() {
+  sounds.init();
+  health = 100;
+  score = 0;
+  currentWave = 1;
+  waveDisplay.textContent = 'WAVE 1 / 3';
+  grenades = 3;
+  currentWeaponKey = 'RIFLE';
+  ammo = WEAPONS.RIFLE.maxAmmo;
+  isCovered = true;
+  gameRunning = true;
+
+  if (boss) {
+    scene.remove(boss.group);
+    boss = null;
+  }
+  bossBarContainer.style.display = 'none';
+
+  enemies.forEach(e => scene.remove(e.group));
+  enemies = [];
+
+  for (let i = 0; i < 3; i++) spawnEnemy();
+
+  updateHUD();
+  document.getElementById('start-screen').classList.add('hidden');
+  document.getElementById('game-over-screen').classList.add('hidden');
+}
+
+function endGame(victory = false) {
+  gameRunning = false;
+  sniperScope.style.display = 'none';
+  const title = document.getElementById('game-over-title');
+  if (victory) {
+    title.textContent = "MISSION ACCOMPLISHED!";
+    title.style.color = "#00ffcc";
+    title.style.textShadow = "0 0 20px #00ffcc";
+  } else {
+    title.textContent = "MISSION FAILED";
+    title.style.color = "#ff0055";
+    title.style.textShadow = "0 0 20px #ff0055";
+  }
+  document.getElementById('final-score-text').textContent = `Total Kills: ${score}`;
+  document.getElementById('game-over-screen').classList.remove('hidden');
+}
+
+function onWindowResize() {
+  camera.aspect = window.innerWidth / window.innerHeight;
+  camera.updateProjectionMatrix();
+  renderer.setSize(window.innerWidth, window.innerHeight);
+}
+
+document.getElementById('start-btn').addEventListener('click', startGame);
+document.getElementById('restart-btn').addEventListener('click', startGame);
+
+initScene();
+animate();
+</script>
+</body>
+</html>
